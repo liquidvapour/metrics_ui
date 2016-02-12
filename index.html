@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Metrics visualisation</title>
+</head>
+<body>
+<style>
+
+    html, body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        margin: auto;
+        overflow: hidden;
+        width: 960px;
+    }
+
+
+    rect {
+        fill: none;
+        stroke: #FFFFFF;
+    }
+    .labelbody {
+        margin: 2px;
+    }
+    .foreignObject {
+        font: 9px sans-serif;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        text-align: left;
+        word-wrap: break-word;
+        cursor: default;
+    }
+
+    div.tooltip {
+        position: absolute;
+        /*text-align: center;*/
+        display: inline-block;
+        padding: 4px;
+        font: 10px sans-serif;
+        background: lightsteelblue;
+        border: 0px;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+</style>
+<script src="assets/bundle.js"></script>
+</body>
+</html>
