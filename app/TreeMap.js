@@ -1,31 +1,35 @@
 export default class TreeMap {
     constructor() {
-        var w = 960;
-        var h = 700;
-        var paddingAllowance = 2;
-        //var color = d3.scale.category10();
-        var redish = d3.rgb("#E60D0D");
-        var blueish = d3.rgb("#0E34E0");
-        var parentStrokeColor = d3.rgb("#4E4545");
-        var parentFillColor = d3.rgb("#7D7E8C");
+        this.w = 960;
+        this.h = 700;
+        this.paddingAllowance = 2;
+        //this.color = d3.scale.category10();
+        this.redish = d3.rgb("#E60D0D");
+        this.blueish = d3.rgb("#0E34E0");
+        this.parentStrokeColor = d3.rgb("#4E4545");
+        this.parentFillColor = d3.rgb("#7D7E8C");
 
-        var colorRedToBlueLinearScale = d3.scale.linear()
+        this.colorRedToBlueLinearScale = d3.scale.linear()
             //.domain([0, 13])
             .domain([0, 24])
-            .range([redish, blueish]);
-        var darkerRedToBlueLinearScale = colorRedToBlueLinearScale
+            .range([this.redish, this.blueish]);
+        this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
             .copy()
-            .range([redish.darker(), blueish.darker()]);
+            .range([this.redish.darker(), this.blueish.darker()]);
 
-        var treemap = d3.layout.treemap()
-            .size([w, h])
+        this.treemap = d3.layout.treemap()
+            .size([this.w, this.h])
             .padding([20, 4, 4, 4])
             .value(d => d.data.cloc ? d.data.cloc.code : null);
 
+    }
+
+    renderTreeMap() {
+        var self = this;
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
-            .style("width", `${w}px`)
-            .style("height", `${h}px`)
+            .style("width", `${this.w}px`)
+            .style("height", `${this.h}px`)
             .append("g")
             .attr("transform", "translate(-.5,-.5)");
 
@@ -34,38 +38,30 @@ export default class TreeMap {
         d3.json("/data/metrics.json", function(json) {
             var getColor = getColorByAge;
             var cell = svg.data([json]).selectAll("g")
-                .data(treemap)
+                .data(self.treemap)
                 .enter().append("g")
                 .attr("class", "cell")
-                .attr("transform", function(d) {
-                    return "translate(" + d.x + "," + d.y + ")";
-                });
+                .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
 
             cell.on("mouseover", mouseover)
                 .on("mouseout", mouseout);
 
             cell.append("rect")
-                .attr("width", function(d) { return d.dx; })
-                .attr("height", function(d) { return d.dy; })
-                .style("fill", function(d) { return getCellFill(d); })
-                .style("stroke", function(d) { return getCellStroke(d); })
-                .style("z-index", function(d) { return -d.depth; });
+                .attr("width", d => d.dx)
+                .attr("height", d => d.dy)
+                .style("fill", d => getCellFill(d))
+                .style("stroke", d => getCellStroke(d))
+                .style("z-index", d => -d.depth);
 
             cell.append("foreignObject")
                 .attr("class", "foreignObject")
-                .attr("width", function(d) {
-                    return Math.max(d.dx - paddingAllowance, 2);
-                })
-                .attr("height", function(d) {
-                    return Math.max(d.dy - paddingAllowance, 2);
-                })
+                .attr("width", d => Math.max(d.dx - self.paddingAllowance, 2))
+                .attr("height", d => Math.max(d.dy - self.paddingAllowance, 2))
                 .append("xhtml:body")
                 .attr("class", "labelbody")
                 .append("div")
                 .attr("class", "label")
-                .text(function(d) {
-                    return d.name;
-                })
+                .text(d => d.name)
                 .attr("text-anchor", "middle");
 
             function formatTooltip(d) {
@@ -102,13 +98,12 @@ export default class TreeMap {
             }
 
             function getCellStroke(d) {
-                return getColor(d, parentStrokeColor, darkerRedToBlueLinearScale);
+                return getColor(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
             }
 
             function getCellFill(d) {
-                return getColor(d, parentFillColor, colorRedToBlueLinearScale);
+                return getColor(d, self.parentFillColor, self.colorRedToBlueLinearScale);
             }
-
         });
     }
 }
