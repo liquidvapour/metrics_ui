@@ -6,9 +6,13 @@ export default class TreeMap {
         //var color = d3.scale.category10();
         var redish = d3.rgb("#E60D0D");
         var blueish = d3.rgb("#0E34E0");
+        var parentStrokeColor = d3.rgb("#4E4545");
+        var parentFillColor = d3.rgb("#7D7E8C");
+
         var colorRedToBlueLinearScale = d3.scale.linear()
-            .domain([0, 13])
-            .range([redish, blueish])
+            //.domain([0, 13])
+            .domain([0, 24])
+            .range([redish, blueish]);
         var darkerRedToBlueLinearScale = colorRedToBlueLinearScale
             .copy()
             .range([redish.darker(), blueish.darker()]);
@@ -28,6 +32,7 @@ export default class TreeMap {
         var tooltip = d3.select("body").append("div") .attr("class", "tooltip") .style("opacity", 0);
 
         d3.json("/data/metrics.json", function(json) {
+            var getColor = getColorByAge;
             var cell = svg.data([json]).selectAll("g")
                 .data(treemap)
                 .enter().append("g")
@@ -84,16 +89,24 @@ export default class TreeMap {
                     .style("opacity", 0);
             }
 
-            function getCellStroke(d) {
+            function getColorByAge(d, parentColor, scale) {
                 return d.children
-                    ? "#4E4545"
-                    : darkerRedToBlueLinearScale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+                    ? parentColor
+                    : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
+            }
+
+            function getColorByNumberOfAuthors(d, parentColor, scale) {
+                return d.children
+                    ? parentColor
+                    : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+            }
+
+            function getCellStroke(d) {
+                return getColor(d, parentStrokeColor, darkerRedToBlueLinearScale);
             }
 
             function getCellFill(d) {
-                return d.children
-                    ? "#7D7E8C"
-                    : colorRedToBlueLinearScale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+                return getColor(d, parentFillColor, colorRedToBlueLinearScale);
             }
 
         });
