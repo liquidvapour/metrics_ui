@@ -24,8 +24,12 @@ export default class TreeMap {
 
     }
 
-    render() {
+    //outputType can be "age" or "authors"
+    render(outputType) {
         var self = this;
+
+        outputType = outputType || "age";
+
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
             .style("width", `${this.w}px`)
@@ -39,7 +43,11 @@ export default class TreeMap {
             .attr("class", "tooltip")
             .style("opacity", 0);
 
-        var getColor = this.getColorByNumberOfAuthors;
+        var getColor = outputType == "age"
+            ? this.getColorByAge
+            : this.getColorByNumberOfAuthors;
+
+        this.setScalesBy(outputType);
 
         d3.json("/data/metrics.json", function(json) {
             var cell = svg.data([json]).selectAll("g")
@@ -98,6 +106,19 @@ export default class TreeMap {
                 return getColor(d, self.parentFillColor, self.colorRedToBlueLinearScale);
             }
         });
+    }
+
+    getDomainBy(outputType) {
+        return outputType == "age"
+                ? [0, 24]
+                : [0, 13];
+    }
+
+    setScalesBy(outputType) {
+        this.colorRedToBlueLinearScale
+            .domain(this.getDomainBy(outputType));
+        this.darkerRedToBlueLinearScale
+            .domain(this.getDomainBy(outputType));
     }
 
     getColorByAge(d, parentColor, scale) {
