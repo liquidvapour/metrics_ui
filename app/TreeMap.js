@@ -3,7 +3,10 @@ export default class TreeMap {
         var w = 960;
         var h = 700;
         var paddingAllowance = 2;
-        var color = d3.scale.category10();
+        //var color = d3.scale.category10();
+        var colorRedToBlueLinearScale = d3.scale.linear()
+            .domain([0, 13])
+            .range(["#E60D0D", "#0E34E0"])
 
 
         var treemap = d3.layout.treemap()
@@ -33,18 +36,9 @@ export default class TreeMap {
                 .on("mouseout", mouseout);
 
             cell.append("rect")
-                .attr("width", function(d) {
-                    return d.dx;
-                })
-                .attr("height", function(d) {
-                    return d.dy;
-                })
-                .style("fill", function(d) {
-                    console.log()
-                    return color(d.children ? 0
-                        : (d.data.checkstyle && d.data.checkstyle.CyclomaticComplexityCheck ? d.data.checkstyle.CyclomaticComplexityCheck : 1));
-                    //return color(d.children ? d.depth : (d.data.cloc ? d.data.cloc.language : 0));
-                })
+                .attr("width", function(d) { return d.dx; })
+                .attr("height", function(d) { return d.dy; })
+                .style("fill", function(d) { return getCellColor(d); })
                 .style("z-index", function(d) { return -d.depth; })
                 ;
 
@@ -79,24 +73,20 @@ export default class TreeMap {
                     .style("left", (d3.event.pageX) + "px")
                     .style("top", (d3.event.pageY) + "px");
             }
+
             function mouseout(d) {
                 tooltip.transition()
                     .duration(500)
                     .style("opacity", 0);
             }
 
+            function getCellColor(d) {
+                return d.children
+                    ? "grey"
+                    : colorRedToBlueLinearScale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+            }
+
         });
-
-
     }
-
-
-
-
-
-
-
-
-
 }
 
