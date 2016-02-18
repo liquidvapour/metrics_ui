@@ -4,10 +4,14 @@ export default class TreeMap {
         var h = 700;
         var paddingAllowance = 2;
         //var color = d3.scale.category10();
+        var redish = d3.rgb("#E60D0D");
+        var blueish = d3.rgb("#0E34E0");
         var colorRedToBlueLinearScale = d3.scale.linear()
             .domain([0, 13])
-            .range(["#E60D0D", "#0E34E0"])
-
+            .range([redish, blueish])
+        var darkerRedToBlueLinearScale = colorRedToBlueLinearScale
+            .copy()
+            .range([redish.darker(), blueish.darker()]);
 
         var treemap = d3.layout.treemap()
             .size([w, h])
@@ -38,9 +42,9 @@ export default class TreeMap {
             cell.append("rect")
                 .attr("width", function(d) { return d.dx; })
                 .attr("height", function(d) { return d.dy; })
-                .style("fill", function(d) { return getCellColor(d); })
-                .style("z-index", function(d) { return -d.depth; })
-                ;
+                .style("fill", function(d) { return getCellFill(d); })
+                .style("stroke", function(d) { return getCellStroke(d); })
+                .style("z-index", function(d) { return -d.depth; });
 
             cell.append("foreignObject")
                 .attr("class", "foreignObject")
@@ -80,9 +84,15 @@ export default class TreeMap {
                     .style("opacity", 0);
             }
 
-            function getCellColor(d) {
+            function getCellStroke(d) {
                 return d.children
-                    ? "grey"
+                    ? "#4E4545"
+                    : darkerRedToBlueLinearScale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+            }
+
+            function getCellFill(d) {
+                return d.children
+                    ? "#7D7E8C"
                     : colorRedToBlueLinearScale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
             }
 
