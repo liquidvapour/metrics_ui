@@ -1,3 +1,29 @@
+class AgeStrategy {
+    constructor() {
+        this.domain = [0, 24];
+    }
+
+    getColor(d, parentColor, scale) {
+        return d.children
+            ? parentColor
+            : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
+    }
+
+}
+
+class AuthorsStrategy {
+    constructor() {
+        this.domain = [0, 13];
+    }
+
+    getColor(d, parentColor, scale) {
+        return d.children
+            ? parentColor
+            : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+    }
+
+}
+
 export default class TreeMap {
     constructor() {
         this.w = 960;
@@ -10,8 +36,6 @@ export default class TreeMap {
         this.parentFillColor = d3.rgb("#7D7E8C");
 
         this.colorRedToBlueLinearScale = d3.scale.linear()
-            .domain([0, 13])
-            //.domain([0, 24])
             .range([this.redish, this.blueish]);
         this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
             .copy()
@@ -30,6 +54,10 @@ export default class TreeMap {
 
         outputType = outputType || "age";
 
+        var strategy = outputType == "age"
+            ? new AgeStrategy()
+            : new AuthorsStrategy();
+
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
             .style("width", `${this.w}px`)
@@ -43,11 +71,8 @@ export default class TreeMap {
             .attr("class", "tooltip")
             .style("opacity", 0);
 
-        var getColor = outputType == "age"
-            ? this.getColorByAge
-            : this.getColorByNumberOfAuthors;
-
-        this.setScalesBy(outputType);
+        var getColor = strategy.getColor;
+        this.setScalesBy(strategy);
 
         d3.json("/data/metrics.json", function(json) {
             var cell = svg.data([json]).selectAll("g")
@@ -108,30 +133,11 @@ export default class TreeMap {
         });
     }
 
-    getDomainBy(outputType) {
-        return outputType == "age"
-                ? [0, 24]
-                : [0, 13];
-    }
-
-    setScalesBy(outputType) {
+    setScalesBy(strategy) {
         this.colorRedToBlueLinearScale
-            .domain(this.getDomainBy(outputType));
+            .domain(strategy.domain);
         this.darkerRedToBlueLinearScale
-            .domain(this.getDomainBy(outputType));
+            .domain(strategy.domain);
     }
-
-    getColorByAge(d, parentColor, scale) {
-        return d.children
-            ? parentColor
-            : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
-    }
-
-    getColorByNumberOfAuthors(d, parentColor, scale) {
-        return d.children
-            ? parentColor
-            : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
-    }
-
 }
 
