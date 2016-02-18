@@ -10,8 +10,8 @@ export default class TreeMap {
         this.parentFillColor = d3.rgb("#7D7E8C");
 
         this.colorRedToBlueLinearScale = d3.scale.linear()
-            //.domain([0, 13])
-            .domain([0, 24])
+            .domain([0, 13])
+            //.domain([0, 24])
             .range([this.redish, this.blueish]);
         this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
             .copy()
@@ -24,7 +24,7 @@ export default class TreeMap {
 
     }
 
-    renderTreeMap() {
+    render() {
         var self = this;
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
@@ -33,10 +33,15 @@ export default class TreeMap {
             .append("g")
             .attr("transform", "translate(-.5,-.5)");
 
-        var tooltip = d3.select("body").append("div") .attr("class", "tooltip") .style("opacity", 0);
+        var tooltip = d3
+            .select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        var getColor = this.getColorByNumberOfAuthors;
 
         d3.json("/data/metrics.json", function(json) {
-            var getColor = getColorByAge;
             var cell = svg.data([json]).selectAll("g")
                 .data(self.treemap)
                 .enter().append("g")
@@ -85,18 +90,6 @@ export default class TreeMap {
                     .style("opacity", 0);
             }
 
-            function getColorByAge(d, parentColor, scale) {
-                return d.children
-                    ? parentColor
-                    : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
-            }
-
-            function getColorByNumberOfAuthors(d, parentColor, scale) {
-                return d.children
-                    ? parentColor
-                    : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
-            }
-
             function getCellStroke(d) {
                 return getColor(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
             }
@@ -106,5 +99,18 @@ export default class TreeMap {
             }
         });
     }
+
+    getColorByAge(d, parentColor, scale) {
+        return d.children
+            ? parentColor
+            : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
+    }
+
+    getColorByNumberOfAuthors(d, parentColor, scale) {
+        return d.children
+            ? parentColor
+            : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+    }
+
 }
 
