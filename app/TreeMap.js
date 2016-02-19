@@ -1,12 +1,25 @@
 class AgeStrategy {
     constructor() {
-        this.domain = [0, 24];
+        this.maxAge = 24;
+        this.domain = [0, this.maxAge];
     }
 
     getColor(d, parentColor, scale) {
-        return d.children
-            ? parentColor
-            : scale(24 - (d.data['code-maat'] && d.data['code-maat'].ageMonths ? d.data['code-maat'].ageMonths : 24));
+        if (d.children) {
+            return parentColor;
+        }
+
+        var inverseAge = 0;
+        if (d.data &&
+            d.data['code-maat']) {
+
+            var age = 'ageMonths' in d.data['code-maat']
+                ? d.data['code-maat'].ageMonths
+                : this.maxAge;
+            console.log('Name: ' + d.name + ' age: ' + age);
+            var inverseAge = this.maxAge - (age);
+        }
+        return scale(inverseAge);
     }
 
 }
@@ -71,7 +84,7 @@ export default class TreeMap {
             .attr("class", "tooltip")
             .style("opacity", 0);
 
-        var getColor = strategy.getColor;
+        //var getColor = (d, parentColor, scale) => strategy.getColor(d, parentColor, scale);
         this.setScalesBy(strategy);
 
         d3.json("/data/metrics.json", function(json) {
@@ -124,11 +137,11 @@ export default class TreeMap {
             }
 
             function getCellStroke(d) {
-                return getColor(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
+                return strategy.getColor(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
             }
 
             function getCellFill(d) {
-                return getColor(d, self.parentFillColor, self.colorRedToBlueLinearScale);
+                return strategy.getColor(d, self.parentFillColor, self.colorRedToBlueLinearScale);
             }
         });
     }
