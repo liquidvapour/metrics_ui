@@ -119,10 +119,13 @@ class LanguageStrategy {
 }
 
 export default class TreeMap {
-    constructor() {
+    constructor(maxTitleDepth = 4, minValueForTitle = 500) {
         this.w = 960;
         this.h = 700;
         this.paddingAllowance = 2;
+        this.maxTitleDepth = maxTitleDepth;
+        this.minValueForTitle = minValueForTitle;
+
         //this.color = d3.scale.category10();
         this.redish = d3.rgb("#E60D0D");
         this.blueish = d3.rgb("#0E34E0");
@@ -137,15 +140,22 @@ export default class TreeMap {
 
         this.treemap = d3.layout.treemap()
             .size([this.w, this.h])
-            .padding([20, 4, 4, 4])
+            .padding(d => {
+                return this.showTitle(d) ? [16,1,1,1] : 1
+            })
             .value(d => d.data.cloc ? d.data.cloc.code : null);
 
+    }
+
+    showTitle(d) {
+        if (d.value < this.minValueForTitle) return 0;
+        return d.children && d.depth <= this.maxTitleDepth;
     }
 
     getStragegy(outputType) {
         switch (outputType) {
             case "age":
-                return new AgeStrategy(this.redish, this.blueish)
+                return new AgeStrategy(this.redish, this.blueish);
             case 'authors':
                 return new AuthorsStrategy(this.redish, this.blueish);
             case 'language':
@@ -201,11 +211,18 @@ export default class TreeMap {
                 .attr("class", "labelbody")
                 .append("div")
                 .attr("class", "label")
-                .text(d => d.name)
+                .text(d => self.showTitle(d) ? d.name : null)
                 .attr("text-anchor", "middle");
 
             function formatTooltip(d) {
-                return `${d.name}<pre>${JSON.stringify(d.data, null, 2)}</pre>`
+                if (d.data) {
+                    return `${d.name}<pre>${JSON.stringify(d.data, null, 2)}</pre>`
+                } else {
+                    console.log(d);
+                    const {area, depth, value} = d;
+                    const data = {area, depth, value};
+                    return `${d.name}<pre>${JSON.stringify(data, null, 2)}</pre>`
+                }
             }
 
             function mouseover(d) {
