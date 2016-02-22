@@ -1,7 +1,30 @@
-class AgeStrategy {
-    constructor() {
+class LinearScaleStrategy {
+    constructor(redish, blueish, domain) {
+        this.colorRedToBlueLinearScale = d3.scale.linear()
+            .range([redish, blueish]);
+        this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
+            .copy()
+            .range([redish.darker(), blueish.darker()]);
+            
+        this.colorRedToBlueLinearScale
+            .domain(domain);
+        this.darkerRedToBlueLinearScale
+            .domain(domain);
+    }
+    
+    getFill(d, parentColor) {
+        return this.getColor(d, parentColor, this.colorRedToBlueLinearScale);
+    }
+    
+    getStroke(d, parentColor) {
+        return this.getColor(d, parentColor, this.darkerRedToBlueLinearScale);
+    }
+}
+
+class AgeStrategy extends LinearScaleStrategy {
+    constructor(redish, blueish) {
+        super(redish, blueish, [0, 24]);
         this.maxAge = 24;
-        this.domain = [0, this.maxAge];
     }
 
     getColor(d, parentColor, scale) {
@@ -17,16 +40,16 @@ class AgeStrategy {
                 ? d.data['code-maat'].ageMonths
                 : this.maxAge;
             console.log('Name: ' + d.name + ' age: ' + age);
-            var inverseAge = this.maxAge - (age);
+            inverseAge = this.maxAge - (age);
         }
         return scale(inverseAge);
     }
 
 }
 
-class AuthorsStrategy {
-    constructor() {
-        this.domain = [0, 13];
+class AuthorsStrategy extends LinearScaleStrategy {
+    constructor(redish, blueish) {
+        super(redish, blueish, [0, 20]);
     }
 
     getColor(d, parentColor, scale) {
@@ -34,7 +57,34 @@ class AuthorsStrategy {
             ? parentColor
             : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
     }
+}
 
+class LanguageStrategy {
+    constructor() {
+        this.scale = d3.scale.category20();
+        this.strokeColor = d3.rgb("black");
+    }
+    
+    getFill(d, parentColor) {
+        if (d.children) {
+            return parentColor;
+        }
+        
+        if (d.data && d.data.cloc && d.data.cloc.language) {
+            return this.scale(d.data.cloc.language);
+        }
+        
+        return this.scale(0);
+    }
+    
+    getStroke(d, parentColor) {
+        if (d.children) {
+            return parentColor;
+        }
+        else {
+           return this.strokeColor; 
+        }
+    }
 }
 
 export default class TreeMap {
@@ -61,15 +111,24 @@ export default class TreeMap {
 
     }
 
+    getStragegy(outputType) {
+        switch (outputType) {
+            case "age":
+                return new AgeStrategy(this.redish, this.blueish)
+            case 'authors':
+                return new AuthorsStrategy(this.redish, this.blueish);
+            case 'language':
+                return new LanguageStrategy();
+        }
+    }
+
     //outputType can be "age" or "authors"
     render(outputType) {
         var self = this;
 
         outputType = outputType || "age";
 
-        var strategy = outputType == "age"
-            ? new AgeStrategy()
-            : new AuthorsStrategy();
+        var strategy = this.getStragegy(outputType);
 
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
@@ -83,9 +142,6 @@ export default class TreeMap {
             .append("div")
             .attr("class", "tooltip")
             .style("opacity", 0);
-
-        //var getColor = (d, parentColor, scale) => strategy.getColor(d, parentColor, scale);
-        this.setScalesBy(strategy);
 
         d3.json("/data/metrics.json", function(json) {
             var cell = svg.data([json]).selectAll("g")
@@ -120,7 +176,7 @@ export default class TreeMap {
             }
 
             function mouseover(d) {
-                const text = Object.keys(d.data).map(key => `${key}:${d.data[key]}`).join("<br/>");
+                //const text = Object.keys(d.data).map(key => `${key}:${d.data[key]}`).join("<br/>");
                 tooltip.transition()
                     .duration(200);
                 tooltip
@@ -137,20 +193,13 @@ export default class TreeMap {
             }
 
             function getCellStroke(d) {
-                return strategy.getColor(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
+                return strategy.getStroke(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
             }
 
             function getCellFill(d) {
-                return strategy.getColor(d, self.parentFillColor, self.colorRedToBlueLinearScale);
+                return strategy.getFill(d, self.parentFillColor, self.colorRedToBlueLinearScale);
             }
         });
-    }
-
-    setScalesBy(strategy) {
-        this.colorRedToBlueLinearScale
-            .domain(strategy.domain);
-        this.darkerRedToBlueLinearScale
-            .domain(strategy.domain);
     }
 }
 
