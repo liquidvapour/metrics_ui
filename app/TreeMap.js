@@ -1,33 +1,29 @@
-class LinearScaleStrategy {
-    constructor(redish, blueish, domain) {
-        this.colorRedToBlueLinearScale = d3.scale.linear()
-            .range([redish, blueish]);
-        this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
-            .copy()
-            .range([redish.darker(), blueish.darker()]);
-            
-        this.colorRedToBlueLinearScale
-            .domain(domain);
-        this.darkerRedToBlueLinearScale
-            .domain(domain);
-    }
-    
-    getFill(d, parentColor) {
-        return this.getColor(d, parentColor, this.colorRedToBlueLinearScale);
-    }
-    
-    getStroke(d, parentColor) {
-        return this.getColor(d, parentColor, this.darkerRedToBlueLinearScale);
-    }
+
+function BuildGetJsComplexityColor(scale, noDataColor, maxComplexity) {
+    return function (d, parentColor) {
+        if (d.children) {
+            return parentColor;
+        }
+
+        if (d.data.jscomplexity && 'cyclomatic' in d.data.jscomplexity) {
+            return scale(maxComplexity - d.data.jscomplexity.cyclomatic);
+        } else {
+            return noDataColor;
+        }
+    }    
 }
 
-class AgeStrategy extends LinearScaleStrategy {
-    constructor(redish, blueish) {
-        super(redish, blueish, [0, 24]);
-        this.maxAge = 24;
-    }
 
-    getColor(d, parentColor, scale) {
+function BuildGetAuthorsColor(scale) {
+    return function(d, parentColor) {
+            return d.children
+            ? parentColor
+            : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
+    };
+}
+
+function BuildGetAgeColor(scale, maxAge) {
+    return function (d, parentColor) {
         if (d.children) {
             return parentColor;
         }
@@ -40,85 +36,32 @@ class AgeStrategy extends LinearScaleStrategy {
                 ? d.data['code-maat'].ageMonths
                 : this.maxAge;
             console.log('Name: ' + d.name + ' age: ' + age);
-            inverseAge = this.maxAge - (age);
+            inverseAge = maxAge - (age);
         }
         return scale(inverseAge);
-    }
-
+    };
 }
 
-class AuthorsStrategy extends LinearScaleStrategy {
-    constructor(redish, blueish) {
-        super(redish, blueish, [0, 20]);
-    }
+function BuildGetLanguageFillColor() {
+    var categoryScale = d3.scale.category20();
 
-    getColor(d, parentColor, scale) {
-        return d.children
-            ? parentColor
-            : scale(d.data['code-maat'] && d.data['code-maat'].nAuthors ? d.data['code-maat'].nAuthors : 0);
-    }
-}
-
-class JsComplexityStrategy extends LinearScaleStrategy {
-    constructor(redish, blueish) {
-        super(redish, blueish, [0, 14]);
-        this.maxComplexity = 14;
-        this.nutralColor = d3.rgb('green');
-    }
-
-    getColor(d, parentColor, scale) {
-        if (d.children) {
-            return parentColor;
-        }
-        
-        if (d.data.jscomplexity && 'cyclomatic' in d.data.jscomplexity) {
-            return scale(this.maxComplexity - d.data.jscomplexity.cyclomatic);
-        } else {
-            return this.nutralColor;
-        }
-    }
-    
-    getStroke(d, parentColor) {
-        if (d.children) {
-            return parentColor;
-        }
-        if (d.data.jscomplexity && 'cyclomatic' in d.data.jscomplexity) {
-            return this.getColor(d, parentColor, this.darkerRedToBlueLinearScale);
-        } else {
-            return this.nutralColor.darker();
-        }
-    }
-}
-
-class LanguageStrategy {
-    constructor() {
-        this.scale = d3.scale.category20();
-        this.strokeColor = d3.rgb("black");
-    }
-    
-    getFill(d, parentColor) {
+    return function(d, parentColor) {
         if (d.children) {
             return parentColor;
         }
         
         if (d.data && d.data.cloc && d.data.cloc.language) {
-            return this.scale(d.data.cloc.language);
+            return categoryScale(d.data.cloc.language);
         }
-        
-        return this.scale(0);
-    }
-    
-    getStroke(d, parentColor) {
-        if (d.children) {
-            return parentColor;
-        }
-        else {
-           return this.strokeColor; 
-        }
+        return categoryScale(0);
     }
 }
 
-export default class TreeMap {
+function GetLanguageStokeColor(d, parentColor) {
+    return d.children ? parentColor : d3.rgb("black");   
+}
+
+class TreeMap {
     constructor(maxTitleDepth = 4, minValueForTitle = 500) {
         this.w = 960;
         this.h = 700;
@@ -131,12 +74,6 @@ export default class TreeMap {
         this.blueish = d3.rgb("#0E34E0");
         this.parentStrokeColor = d3.rgb("#4E4545");
         this.parentFillColor = d3.rgb("#7D7E8C");
-
-        this.colorRedToBlueLinearScale = d3.scale.linear()
-            .range([this.redish, this.blueish]);
-        this.darkerRedToBlueLinearScale = this.colorRedToBlueLinearScale
-            .copy()
-            .range([this.redish.darker(), this.blueish.darker()]);
 
         this.treemap = d3.layout.treemap()
             .size([this.w, this.h])
@@ -152,26 +89,10 @@ export default class TreeMap {
         return d.children && d.depth <= this.maxTitleDepth;
     }
 
-    getStragegy(outputType) {
-        switch (outputType) {
-            case "age":
-                return new AgeStrategy(this.redish, this.blueish);
-            case 'authors':
-                return new AuthorsStrategy(this.redish, this.blueish);
-            case 'language':
-                return new LanguageStrategy();
-            case 'jscomplexity':
-                return new JsComplexityStrategy(this.redish, this.blueish);
-        }
-    }
 
     //outputType can be "age" or "authors"
-    render(outputType) {
+    render(getFillColor, getStrokeColor) {
         var self = this;
-
-        outputType = outputType || "age";
-
-        var strategy = this.getStragegy(outputType);
 
         var svg = d3.select("body").append("svg")
             .style("position", "relative")
@@ -199,8 +120,8 @@ export default class TreeMap {
             cell.append("rect")
                 .attr("width", d => d.dx)
                 .attr("height", d => d.dy)
-                .style("fill", d => getCellFill(d))
-                .style("stroke", d => getCellStroke(d))
+                .style("fill", d => getFillColor(d, self.parentFillColor))
+                .style("stroke", d => getStrokeColor(d, self.parentStrokeColor))
                 .style("z-index", d => -d.depth);
 
             cell.append("foreignObject")
@@ -241,15 +162,8 @@ export default class TreeMap {
                     .duration(500)
                     .style("opacity", 0);
             }
-
-            function getCellStroke(d) {
-                return strategy.getStroke(d, self.parentStrokeColor, self.darkerRedToBlueLinearScale);
-            }
-
-            function getCellFill(d) {
-                return strategy.getFill(d, self.parentFillColor, self.colorRedToBlueLinearScale);
-            }
         });
     }
 }
 
+export {TreeMap, BuildGetLanguageFillColor, GetLanguageStokeColor, BuildGetAgeColor, BuildGetAuthorsColor, BuildGetJsComplexityColor};
